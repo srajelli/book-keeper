@@ -43,19 +43,64 @@ which lit || npx liteparse --version 2>/dev/null || echo "LITEPARSE_NOT_FOUND"
 
 # 5. Check if qpdf is available (for encrypted PDFs)
 which qpdf || echo "QPDF_NOT_FOUND"
+
+# 6. Detect OS for install commands
+uname -s
 ```
 
-**If ledger is not installed**, guide the user:
+### Auto-install missing prerequisites
+
+After running the checks above, if any tools are missing, ask the user for
+permission to install them. Present a single summary of what's missing and
+what will be installed, then wait for confirmation before proceeding.
+
+Example message:
+```
+I need a few tools to get started. Here's what's missing:
+
+  - ledger-cli (required) — double-entry accounting engine
+  - liteparse (required for PDF import) — PDF text extraction
+  - qpdf (optional) — for decrypting password-protected bank PDFs
+
+Shall I install these now? I'll use:
+  - brew install ledger qpdf     (system packages)
+  - npm i -g @llamaindex/liteparse  (Node.js CLI)
+```
+
+**Only install after the user confirms.** Use the appropriate package manager
+for the detected OS:
+
 ```bash
-# macOS
-brew install ledger
+# macOS (Homebrew)
+brew install ledger        # required
+brew install qpdf          # optional, for encrypted PDFs
 
 # Ubuntu/Debian
-sudo apt-get install ledger
+sudo apt-get install -y ledger
+sudo apt-get install -y qpdf
 
 # Fedora
-sudo dnf install ledger
+sudo dnf install -y ledger
+sudo dnf install -y qpdf
+
+# liteparse (all platforms, requires Node.js 18+)
+npm i -g @llamaindex/liteparse
 ```
+
+**Important rules for auto-install:**
+- ALWAYS ask permission before installing anything
+- Show exactly which commands will be run
+- If the user declines, continue with whatever tools are available
+  (e.g., skip PDF import if liteparse is missing, skip decrypt if qpdf is missing)
+- If a package manager is not available (no brew, no apt), show manual install
+  instructions and ask the user to install themselves
+- Never run `sudo` without the user seeing and approving the command
+- After installation, verify each tool works:
+  ```bash
+  ledger --version
+  lit --version
+  qpdf --version
+  ```
 
 **If no ledger file exists**, help bootstrap one:
 
