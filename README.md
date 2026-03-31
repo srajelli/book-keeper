@@ -23,27 +23,28 @@ Import bank statement PDFs, auto-categorize transactions, and maintain a plain-t
 
 ## Installation
 
-Add the plugin marketplace and install:
+### Via skills CLI (recommended)
+
+```bash
+npx skills add srajelli/book-keeper
+```
+
+### Via Claude Code plugin marketplace
 
 ```
-/plugin marketplace add shubhamrajelli/book-keeper
+/plugin marketplace add srajelli/book-keeper
 ```
 
-Or add directly to your Claude Code settings:
+### Manual
 
-```json
-{
-  "plugins": [
-    {
-      "name": "book-keeper",
-      "source": {
-        "source": "github",
-        "repo": "shubhamrajelli/book-keeper"
-      }
-    }
-  ]
-}
+Clone and copy the skill into your Claude Code config:
+
+```bash
+git clone https://github.com/srajelli/book-keeper.git
+cp -r book-keeper/skills/book-keeper ~/.claude/skills/
 ```
+
+The skill auto-installs missing prerequisites (ledger, liteparse, qpdf) on first run — just confirm when prompted.
 
 ## Usage
 
