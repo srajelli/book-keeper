@@ -1,8 +1,13 @@
 {
   "name": "book-keeper",
-  "version": "1.1.0",
-  "description": "Double-entry bookkeeping with ledger-cli. Import bank statement PDFs, auto-categorize transactions, and get full financial visibility.",
-  "author": "shubhamrajelli",
-  "license": "MIT",
-  "skills": ["book-keeper"]
+  "owner": {
+    "name": "Shubham Rajelli"
+  },
+  "plugins": [
+    {
+      "name": "book-keeper",
+      "source": ".",
+      "description": "Double-entry bookkeeping with ledger-cli. Import bank statement PDFs, auto-categorize transactions, and get full financial visibility."
+    }
+  ]
 }
