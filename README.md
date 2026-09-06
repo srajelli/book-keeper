@@ -12,6 +12,7 @@ Import bank statement PDFs, auto-categorize transactions, and maintain a plain-t
 - **Any bank** — supports Indian, US, UK/EU, and international statement formats
 - **Personal or business** — adapts account hierarchy to your use case
 - **Rich reporting** — balance sheets, expense breakdowns, monthly trends, cash flow, budget tracking
+- **Suspicious transaction review** — flags unusual, unauthorized-looking, or source-mismatched entries with explainable risk signals for your review
 - **First-run setup** — bootstraps a new ledger file if you don't have one
 - **Privacy-first** — all processing is local, no data leaves your machine
 
@@ -61,6 +62,8 @@ Invoke the skill with `/book-keeper` or just ask about your finances:
 > What's my net worth?
 
 > Show travel expenses for the last 3 months
+
+> Audit my books for suspicious or unauthorized transactions this year
 ```
 
 ## How it works
@@ -68,9 +71,9 @@ Invoke the skill with `/book-keeper` or just ask about your finances:
 1. **Parse** — extracts text from bank statement PDFs using liteparse
 2. **Identify** — detects bank format, date format, columns, and currency
 3. **Categorize** — matches transaction narrations to expense/income categories
-4. **Review** — presents transactions for your approval, highlights ambiguous ones
+4. **Review** — presents transactions for your approval, highlights ambiguous, duplicate, and suspicious ones
 5. **Append** — adds approved transactions to your ledger file in chronological order
-6. **Verify** — runs `ledger balance` to confirm everything balances to zero
+6. **Verify** — runs `ledger balance` to confirm the accounting structure balances; this does not prove every transaction is legitimate
 7. **Report** — shows a summary of what was imported
 
 ## Account structure

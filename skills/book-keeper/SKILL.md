@@ -6,10 +6,13 @@ description: >-
   parses transactions, auto-categorizes them, and maintains a ledger-cli
   journal. Works with any currency, any bank, personal or business finances.
   Provides full visibility over income, expenses, assets, and liabilities.
+  Flags suspicious, unusual, or unauthorized-looking transactions for human
+  review, with explainable signals rather than claims of proven fraud.
 
   TRIGGER when: user asks to import a bank statement, add transactions from
   a PDF/CSV, view balances, generate expense/income reports, check spending,
-  set up a new ledger, or anything related to bookkeeping with ledger-cli.
+  audit books, find suspicious/fraudulent/unauthorized entries, set up a new
+  ledger, or anything related to bookkeeping with ledger-cli.
 
   DO NOT TRIGGER when: unrelated to finance or accounting.
 ---
@@ -361,17 +364,145 @@ YYYY-MM-DD * Clean Payee Name
 3. **Check for duplicates** by comparing date + amount + rough narration match
    against existing entries in the ledger file
 
-4. After user approval, **append** to the ledger file in chronological order
+4. **Screen for suspicious transactions** using the fraud/suspicious review
+   workflow below. Show suspicious flags alongside duplicate and ambiguity
+   status before asking for approval. Require explicit confirmation before
+   appending any high-risk candidate.
 
-5. **Verify** the journal still parses:
+5. After user approval, **append** only approved transactions to the ledger file
+   in chronological order
+
+6. **Verify** the journal still parses:
    ```bash
    ledger -f <ledger-file> balance
    ```
+   This validates double-entry accounting structure, not whether each
+   transaction was authorized or legitimate.
 
-6. **Show summary** after import:
+7. **Show summary** after import:
    ```bash
    ledger -f <ledger-file> balance --period "this month" Expenses Income
    ```
+
+---
+
+## Fraud / Suspicious Transaction Review
+
+This skill can flag entries that deserve human verification. It cannot prove
+fraud, prevent fraud, or provide legal/accounting guarantees. Treat every flag
+as a risk signal that the user must confirm against bank records, receipts, and
+their own knowledge.
+
+### Build a local baseline
+
+Use only local ledger and statement data. Do not transmit financial data. When
+reviewing a period, gather:
+
+```bash
+ledger -f $FILE print --period "<period>"
+ledger -f $FILE csv --period "<period>"
+ledger -f $FILE register --period "<period>"
+```
+
+Learn normal behavior from available history:
+- Payees and raw narrations seen before
+- Typical amount ranges by payee, category, and source account
+- Normal transaction frequency by payee/category
+- Known own-account transfers, recurring bills, refunds, reversals, opening
+  balances, and adjustment entries
+- Statement references, check numbers, UPI/ACH/NEFT/IMPS references, or other
+  source identifiers when present
+
+Preserve original narration/reference fields when importing. They are evidence
+for later review.
+
+### Explainable signals
+
+Flag a transaction when one or more concrete signals apply:
+
+- **Unseen or rare payee**: payee/narration has little or no history
+- **Unusual amount**: amount is materially above that payee, category, or
+  account's historical range
+- **Rapid repeats**: multiple same or near-same charges appear close together,
+  even when they are not exact import duplicates
+- **Unusual frequency**: transaction count for a payee/category is materially
+  above normal for the period
+- **Round or high value**: unusually round or high-value debit, withdrawal, or
+  transfer for the account
+- **New destination**: new transfer destination, cash withdrawal pattern, card,
+  account, or counterparty not seen before
+- **Category mismatch**: narration/payee behavior conflicts with the learned
+  category or account history
+- **Reconciliation mismatch**: statement candidate is missing from the ledger,
+  ledger entry is missing from available source statements, or source amount/date
+  does not match the ledger entry
+
+Only use time, location, device, IP, merchant terminal, or channel signals if
+the statement or ledger source actually contains those fields. Never infer or
+invent evidence.
+
+### Reduce false positives
+
+Suppress or lower severity for expected activity:
+
+- Recurring bills and subscriptions with normal amount/date drift
+- Own-account transfers with matching source/destination legs
+- Refunds, reversals, chargebacks, cashbacks, and correcting entries that pair
+  with an earlier transaction
+- Opening balances, migration entries, depreciation, accruals, and manual
+  adjustments when labeled as such
+- Known high-value categories such as rent, payroll, tax, insurance, mortgage,
+  investments, or vendor payments when consistent with history
+
+If history is sparse, label the finding as low-confidence or "needs review"
+instead of making a strong claim.
+
+### Finding format
+
+For every flagged row, show:
+
+```
+Date | Payee | Amount | Account/Category | Severity | Signal(s) | Recommended action
+```
+
+Severity guidance:
+- **High**: multiple strong signals, source mismatch, high-value unknown debit,
+  new transfer destination, or likely unauthorized-looking cash/card activity
+- **Medium**: one strong signal or several weaker signals
+- **Low**: sparse history, first-time payee, or mild amount/frequency anomaly
+
+Recommended actions should be concrete:
+- Ask the user whether they recognize the payee/amount
+- Request the matching receipt, invoice, statement page, or bank reference
+- Compare to the card/bank portal
+- Contact the bank/card issuer for suspected unauthorized activity
+- Ask an accountant before making accounting or tax corrections
+
+Never label an item as confirmed fraud unless the user explicitly confirms it.
+Never delete, rewrite, hide, or recategorize a suspicious ledger entry without
+explicit user approval. For confirmed unauthorized items, preserve the original
+audit trail and guide a separate correcting or reversal entry if the user
+approves it.
+
+### Existing-books audit workflow
+
+When the user asks to audit existing books for suspicious, fraudulent, or
+unauthorized entries:
+
+1. Ask for the ledger file and period if they are not known.
+2. Run ledger print/csv/register commands for the selected period and enough
+   prior history to establish a baseline.
+3. If source statements are available, compare ledger rows against statement
+   rows by date, amount, account, narration, and source reference.
+4. Group results as:
+   - **Suspicious**: explainable risk signals that need user verification
+   - **Needs source**: ledger entries that cannot be matched to available
+     statement/receipt evidence
+   - **Cleared**: normal recurring, matched, or user-recognized activity
+5. Rank findings by severity and amount. Offer drill-down by payee, account,
+   category, or source statement.
+6. Ask the user which entries they recognize before recommending any ledger
+   correction.
 
 ---
 
@@ -421,7 +552,8 @@ ledger -f $FILE --unbudgeted balance Expenses              # Unbudgeted spending
 When presenting reports to the user, add context:
 - Compare to previous periods ("Spending is up 15% vs last month")
 - Highlight largest categories
-- Flag unusual transactions
+- Flag unusual or suspicious transactions with explainable signals, while
+  making clear that flags require human verification
 
 ---
 
@@ -459,3 +591,9 @@ Generated:
 8. **Privacy**: never log or transmit financial data; all processing is local
 9. **Learn from corrections**: if the user recategorizes something, apply that
    pattern to future imports from the same payee
+10. **Fraud review is evidence-based**: flag risk signals, do not claim proof
+    of fraud unless the user confirms it
+11. **No automatic mutation for suspicious entries**: preserve original entries
+    and add user-approved correcting/reversal entries separately
+12. **No invented evidence**: use time, location, device, source-reference, or
+    channel signals only when present in the source data
